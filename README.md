@@ -23,7 +23,7 @@ composer require lyseontech/drupal-external-auth
 $response = new Response();
 $pdo = new PDO(...);
 
-(new \DrupalExternalAuth\Auth($pdo))->auth([
+(new \DrupalExternalAuth\Auth($response, $pdo))->auth([
     'name'     => 'username',
     'pass'     => 'PrefixHash$' . 'hashOfPassord',
     'timezone' => 'America/Sao_Paulo',
