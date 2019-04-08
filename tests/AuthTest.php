@@ -3,21 +3,11 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 use Wikimedia\PhpSessionSerializer;
 
-class mockPDO extends \PDO
-{
-
-    public function __construct()
-    {}
-}
-
 class AuthTest extends TestCase
 {
 
-    protected static $pdo;
-
     public static function setUpBeforeClass()
     {
-        self::$pdo = new \mockPDO();
         $_SERVER['HTTP_HOST']   = 'localhost';
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
     }
@@ -155,10 +145,5 @@ class AuthTest extends TestCase
             $this->assertEquals(36, strlen($cookie->getName()));
             $this->assertStringStartsWith('SESS', $cookie->getName());
         }
-    }
-
-    public static function tearDownAfterClass()
-    {
-        self::$pdo = null;
     }
 }
