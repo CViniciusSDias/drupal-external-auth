@@ -15,7 +15,7 @@ script:
   - composer test
 
 after_success:
-    - php vendor/bin/coveralls --verbose
+    - php vendor/bin/php-coveralls --verbose
 
 matrix:
   fast_finish: true
