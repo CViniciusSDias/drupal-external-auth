@@ -2,7 +2,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/lyseontech/drupal-external-auth/badge.svg?branch=master)](https://coveralls.io/github/lyseontech/drupal-external-auth?branch=master)
 [![PHPStan](https://img.shields.io/badge/PHPStan-enabled-brightgreen.svg?style=flat)](https://github.com/phpstan/phpstan)
 [![Latest Stable Version](https://poser.pugx.org/lyseontech/drupal-external-auth/v/stable)](https://packagist.org/packages/lyseontech/drupal-external-auth)
-[![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%207-blue.svg)](https://php.net/)
+[![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%207.2-blue.svg)](https://php.net/)
 [![License](https://poser.pugx.org/lyseontech/drupal-external-auth/license)](https://packagist.org/packages/lyseontech/drupal-external-auth)
 
 # Drupal External Auth
