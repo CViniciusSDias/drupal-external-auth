@@ -24,7 +24,7 @@
 		}
 	},
 	"require" : {
-		"php" : ">=7",
+		"php" : ">=7.2",
         "drupal/core-utility": "^8.6",
 		"wikimedia/php-session-serializer": "^1.0",
 		"symfony/http-foundation": "^4.2"
