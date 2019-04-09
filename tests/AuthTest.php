@@ -146,4 +146,35 @@ class AuthTest extends TestCase
             $this->assertStringStartsWith('SESS', $cookie->getName());
         }
     }
+
+    public function testLogout()
+    {
+        $_COOKIE = ['SESS1234' => 'theHash'];
+        $this->assertArrayHasKey('SESS1234', $_COOKIE);
+
+        $fetchAllMock = $this->getMockBuilder("StdClasss")
+            ->setMethods(['prepare', 'execute'])
+            ->getMock();
+
+        $fetchAllMock->expects($this->exactly(1))
+            ->method('execute')
+            ->with($this->callback(function($params) {
+                $this->assertArrayHasKey(':sid', $params);
+                return true;
+            }));
+
+        $mock = $this->getMockBuilder('pdo')
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $mock->expects($this->exactly(1))
+            ->method('prepare')
+            ->with($this->stringStartsWith('DELETE FROM'))
+            ->will($this->returnValue($fetchAllMock));
+
+        $response = new Response();
+        (new \DrupalExternalAuth\Auth($response, $mock))->logout();
+        $this->assertArrayNotHasKey('SESS1234', $_COOKIE);
+        $this->assertArrayNotHasKey('SESS1234', $response->headers->getCookies());
+    }
 }

@@ -28,7 +28,7 @@ class Auth
      * @var Response
      */
     private $response;
-    public function __construct($response, $pdo, $schema = 'drupal')
+    public function __construct(Response $response, \PDO $pdo, $schema = 'drupal')
     {
         $this->response = $response;
         $this->pdo = $pdo;
@@ -75,6 +75,31 @@ class Auth
             ':timestamp' => $this->timeStamp,
             ':session' => $sessionDrupalEncoded
         ]);
+    }
+
+    public function logout()
+    {
+        foreach ($_COOKIE as $key => $value) {
+            if (substr($key, 0, 4) == 'SESS') {
+                $sth = $this->pdo->prepare(
+                    'DELETE FROM '.$this->schema.'sessions WHERE sid = :sid'
+                );
+                $sth->execute([':sid' => Crypt::hashBase64($value)]);
+                $cookie = Cookie::create(
+                    $key,
+                    null,
+                    -1,
+                    '/',
+                    getenv('DOMAIN'),
+                    (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == "on"),
+                    true,
+                    false,
+                    null
+                );
+                unset($_COOKIE[$key]);
+                $this->response->headers->setCookie($cookie);
+            }
+        }
     }
 
     private function getUid($data)
