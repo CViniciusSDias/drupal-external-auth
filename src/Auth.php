@@ -17,24 +17,24 @@ class Auth
      * Current timestamp
      * @var string
      */
-    private $timeStamp;
+    private $timestamp;
     /**
      * Default schema of Drupal instalation
      * @var string
      */
-    private $schema = 'drupal.';
+    private $schema = 'drupal';
     private $cookie;
     /**
      * @var Response
      */
     private $response;
 
-    public function __construct(Response $response, \PDO $pdo, $schema = 'drupal')
+    public function __construct(Response $response, \PDO $pdo, string $schema = 'drupal')
     {
         $this->response = $response;
         $this->pdo = $pdo;
         $this->schema = $schema ? $schema.'.' : '';
-        $this->timeStamp = time();
+        $this->timestamp = time();
     }
 
     public function auth(array $data)
@@ -56,17 +56,18 @@ class Auth
     private function isLogged(string $uid): bool
     {
         $cookie = $this->getCookie();
-        if ($cookie) {
-            $sth = $this->pdo->prepare(
-                'SELECT uid FROM '.$this->schema.'sessions WHERE sid = :sid'
-            );
-            $sth->execute([':sid' => Crypt::hashBase64($cookie['value'])]);
-            $user = $sth->fetch();
-            if ($user) {
-                return true;
-            }
-            $this->cleanCookieData($cookie);
+        if (!$cookie) {
+            return false;
         }
+        $sth = $this->pdo->prepare(
+            'SELECT uid FROM '.$this->schema.'sessions WHERE sid = :sid'
+        );
+        $sth->execute([':sid' => Crypt::hashBase64($cookie['value'])]);
+        $user = $sth->fetch();
+        if ($user) {
+            return true;
+        }
+        $this->cleanCookieData($cookie);
         return false;
     }
 
@@ -77,8 +78,8 @@ class Auth
                 'uid' => $uid
             ],
             '_sf2_meta' => [
-                'u' => $this->timeStamp,
-                'c' => $this->timeStamp,
+                'u' => $this->timestamp,
+                'c' => $this->timestamp,
                 'l' => ini_get('session.cookie_lifetime')
             ]
         ];
@@ -106,7 +107,7 @@ class Auth
             ':uid' => $uid,
             ':sid' => Crypt::hashBase64($sessionHash),
             ':hostname' => $_SERVER['REMOTE_ADDR'],
-            ':timestamp' => $this->timeStamp,
+            ':timestamp' => $this->timestamp,
             ':session' => $sessionDrupalEncoded
         ]);
     }
@@ -201,8 +202,8 @@ class Auth
             ':mail' => null,
             ':timezone' => $data['timezone'],
             ':status' => 1,
-            ':created' => $this->timeStamp,
-            ':changed' => $this->timeStamp,
+            ':created' => $this->timestamp,
+            ':changed' => $this->timestamp,
             ':access' => 0,
             ':login' => 0,
             ':init' => null,
