@@ -161,7 +161,7 @@ class Auth
         $sth->execute([':sid' => Crypt::hashBase64($value)]);
     }
 
-    private function getUid(array $data): string
+    private function getUid(array $data): int
     {
         $sth = $this->pdo->prepare(
             'SELECT uid FROM '.$this->schema.'users_field_data WHERE name = :name'
@@ -174,7 +174,7 @@ class Auth
         return $this->createUser($data);
     }
 
-    private function createUser(array $data): string
+    private function createUser(array $data): int
     {
         $this->pdo->query('INSERT INTO '.$this->schema.'sequences () VALUES ();');
         $this->uid = $this->pdo->lastInsertId();
