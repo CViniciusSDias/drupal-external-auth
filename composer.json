@@ -43,10 +43,10 @@
 		"unit" : "phpunit --coverage-clover ./tests/log/clover.xml --colors=always",
 		"phpstan" : "vendor/bin/phpstan analyse --level 7 src",
 		"test" : [
-			"@unit",
+            "@phpstan",
 			"@phpcs",
 			"@phplint",
-            "@phpstan"
+			"@unit"
 		]
 	}
 }
