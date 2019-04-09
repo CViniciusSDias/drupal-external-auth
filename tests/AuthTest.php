@@ -46,7 +46,7 @@ class AuthTest extends TestCase
         $mock->expects($this->exactly(2))
             ->method('prepare')
             ->withConsecutive(
-                [$this->stringStartsWith('SELECT uid FROM users_field_data')],
+                [$this->stringStartsWith('SELECT uid FROM drupal.users_field_data')],
                 [$this->stringStartsWith('INSERT INTO drupal.sessions')]
             )
             ->will($this->returnValue($fetchAllMock));
@@ -124,7 +124,7 @@ class AuthTest extends TestCase
         $mock->expects($this->exactly(5))
             ->method('prepare')
             ->withConsecutive(
-                [$this->stringStartsWith('SELECT uid FROM users_field_data')],
+                [$this->stringStartsWith('SELECT uid FROM drupal.users_field_data')],
                 [$this->stringStartsWith('INSERT INTO drupal.users ')],
                 [$this->stringStartsWith('INSERT INTO drupal.users_field_data ')],
                 [$this->stringStartsWith('INSERT INTO drupal.user__roles ')],

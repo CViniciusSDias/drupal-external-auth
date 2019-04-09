@@ -80,7 +80,7 @@ class Auth
     private function getUid($data)
     {
         $sth = $this->pdo->prepare(
-            'SELECT uid FROM users_field_data WHERE name = :name'
+            'SELECT uid FROM '.$this->schema.'users_field_data WHERE name = :name'
         );
         $sth->execute([':name' => $data['name']]);
         $user = $sth->fetch();
