@@ -201,7 +201,7 @@ class AuthTest extends TestCase
             ->method('fetch')
             ->willReturn(
                 $this->returnValue(null),
-                $this->returnValue(['uid' => 1]),
+                $this->returnValue(['uid' => 1])
             );
 
         $fetchAllMock->expects($this->exactly(3))
