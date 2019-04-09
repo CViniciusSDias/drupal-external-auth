@@ -28,6 +28,7 @@ class Auth
      * @var Response
      */
     private $response;
+
     public function __construct(Response $response, \PDO $pdo, $schema = 'drupal')
     {
         $this->response = $response;
@@ -35,9 +36,42 @@ class Auth
         $this->schema = $schema ? $schema.'.' : '';
         $this->timeStamp = time();
     }
-    public function auth($data)
+
+    public function auth(array $data)
     {
         $uid = $this->getUid($data);
+        if (!$this->isLogged($uid)) {
+            $this->login($uid);
+        }
+    }
+
+    public function logout()
+    {
+        $cookie = $this->getCookie();
+        if ($cookie) {
+            $this->cleanCookieData($cookie);
+        }
+    }
+
+    private function isLogged(string $uid): bool
+    {
+        $cookie = $this->getCookie();
+        if ($cookie) {
+            $sth = $this->pdo->prepare(
+                'SELECT uid FROM '.$this->schema.'sessions WHERE sid = :sid'
+            );
+            $sth->execute([':sid' => Crypt::hashBase64($cookie['value'])]);
+            $user = $sth->fetch();
+            if ($user) {
+                return true;
+            }
+            $this->cleanCookieData($cookie);
+        }
+        return false;
+    }
+
+    private function login(string $uid)
+    {
         $sessionDrupal = [
             '_sf2_attributes' => [
                 'uid' => $uid
@@ -77,32 +111,52 @@ class Auth
         ]);
     }
 
-    public function logout()
+    /**
+     * Return existing cookies
+     * @return array
+     */
+    private function getCookie(): array
     {
         foreach ($_COOKIE as $key => $value) {
             if (substr($key, 0, 4) == 'SESS') {
-                $sth = $this->pdo->prepare(
-                    'DELETE FROM '.$this->schema.'sessions WHERE sid = :sid'
-                );
-                $sth->execute([':sid' => Crypt::hashBase64($value)]);
-                $cookie = Cookie::create(
-                    $key,
-                    null,
-                    -1,
-                    '/',
-                    getenv('DOMAIN'),
-                    (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == "on"),
-                    true,
-                    false,
-                    null
-                );
-                unset($_COOKIE[$key]);
-                $this->response->headers->setCookie($cookie);
+                return [
+                    'key'   => $key,
+                    'value' => $value
+                ];
             }
         }
+        return [];
     }
 
-    private function getUid($data)
+    private function cleanCookieData(array $cookie)
+    {
+        // Delete from database
+        $this->deleteSessionFromDatabase($cookie['value']);
+        // Send unset to user
+        $this->response->headers->setCookie(Cookie::create(
+            $cookie['key'],
+            null,
+            -1,
+            '/',
+            getenv('DOMAIN'),
+            (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == "on"),
+            true,
+            false,
+            null
+        ));
+        // Unset from global var
+        unset($_COOKIE[$cookie['key']]);
+    }
+
+    private function deleteSessionFromDatabase(string $value)
+    {
+        $sth = $this->pdo->prepare(
+            'DELETE FROM '.$this->schema.'sessions WHERE sid = :sid'
+        );
+        $sth->execute([':sid' => Crypt::hashBase64($value)]);
+    }
+
+    private function getUid(array $data): string
     {
         $sth = $this->pdo->prepare(
             'SELECT uid FROM '.$this->schema.'users_field_data WHERE name = :name'
@@ -114,8 +168,8 @@ class Auth
         }
         return $this->createUser($data);
     }
-    
-    private function createUser($data)
+
+    private function createUser(array $data): string
     {
         $this->pdo->query('INSERT INTO '.$this->schema.'sequences () VALUES ();');
         $uid = $this->pdo->lastInsertId();
