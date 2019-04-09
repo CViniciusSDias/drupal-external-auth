@@ -19,6 +19,7 @@ If the user does not exist in Drupal, it creates the user and authenticates.
 composer require lyseontech/drupal-external-auth
 ```
 
+### Login
 ```php
 $response = new Response();
 $pdo = new PDO(...);
@@ -45,3 +46,15 @@ field.
 
 If you dont implement custom validation hash in Drupal, the user can only
 access Drupal through your system.
+
+### Logout
+
+```php
+$response = new Response();
+$pdo = new PDO(...);
+
+(new \DrupalExternalAuth\Auth($response, $pdo))->logout();
+foreach ($response->headers->getCookies() as $cookie) {
+    header('Set-Cookie: '.$cookie->getName().strstr($cookie, '='));
+}
+```
