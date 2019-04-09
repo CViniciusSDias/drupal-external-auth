@@ -12,7 +12,7 @@ class AuthTest extends TestCase
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
     }
 
-    public function testUserExists()
+    public function testAuthWithUserExists()
     {
         $response = new Response();
 
@@ -33,7 +33,7 @@ class AuthTest extends TestCase
                     $this->assertArrayHasKey('_sf2_attributes', $session);
                     $this->assertArrayHasKey('_sf2_meta', $session);
                     $this->assertArrayHasKey('uid', $session['_sf2_attributes']);
-                    $this->assertEquals(1, $session['_sf2_attributes']['uid']);
+                    $this->assertSame(1, $session['_sf2_attributes']['uid']);
                     return true;
                 })]
             );
@@ -61,7 +61,7 @@ class AuthTest extends TestCase
             ]
         ]);
         foreach ($response->headers->getCookies() as $cookie) {
-            $this->assertEquals(36, strlen($cookie->getName()));
+            $this->assertSame(36, strlen($cookie->getName()));
             $this->assertStringStartsWith('SESS', $cookie->getName());
         }
     }
@@ -94,7 +94,7 @@ class AuthTest extends TestCase
                     $this->assertArrayHasKey(':entity_id', $params);
                     $this->assertArrayHasKey(':revision_id', $params);
                     $this->assertArrayHasKey(':roles_target_id', $params);
-                    $this->assertEquals('administrator', $params[':roles_target_id']);
+                    $this->assertSame('administrator', $params[':roles_target_id']);
                     return true;
                 })],
                 [$this->callback(function($params) {
@@ -102,7 +102,7 @@ class AuthTest extends TestCase
                     $this->assertArrayHasKey('_sf2_attributes', $session);
                     $this->assertArrayHasKey('_sf2_meta', $session);
                     $this->assertArrayHasKey('uid', $session['_sf2_attributes']);
-                    $this->assertEquals(123, $session['_sf2_attributes']['uid']);
+                    $this->assertSame(123, $session['_sf2_attributes']['uid']);
                     return true;
                 })]
             );
@@ -142,9 +142,107 @@ class AuthTest extends TestCase
             ]
         ]);
         foreach ($response->headers->getCookies() as $cookie) {
-            $this->assertEquals(36, strlen($cookie->getName()));
+            $this->assertSame(36, strlen($cookie->getName()));
             $this->assertStringStartsWith('SESS', $cookie->getName());
         }
+    }
+
+    public function testAuthWithUserIsLogged()
+    {
+        $response = new Response();
+
+        $fetchAllMock = $this->getMockBuilder("StdClasss")
+            ->setMethods(['execute', 'fetch'])
+            ->getMock();
+
+        $fetchAllMock->expects($this->once())
+            ->method('fetch')
+            ->will($this->returnValue(['uid' => 123]));
+
+        $fetchAllMock->expects($this->once())
+            ->method('execute')
+            ->with($this->callback(function($params) {
+                $this->assertArrayHasKey(':sid', $params);
+                return true;
+            }));
+
+        $mock = $this->getMockBuilder('pdo')
+            ->disableOriginalConstructor()
+            ->setMethods(['query', 'prepare'])
+            ->getMock();
+
+        $mock->expects($this->once())
+            ->method('prepare')
+            ->with($this->stringStartsWith('SELECT uid FROM drupal.sessions'))
+            ->will($this->returnValue($fetchAllMock));
+
+        $_COOKIE = ['SESSbla' => 'ble'];
+        (new \DrupalExternalAuth\Auth($response, $mock))->auth([
+            'name' => 'username',
+            'pass' => 'PrefixHash$' . 'hashOfPassord',
+            'timezone' => 'America/Sao_Paulo',
+            'langcode' => 'pt-br',
+            'roles' => [
+                'administrator'
+            ]
+        ]);
+        unset($_COOKIE['SESSbla']);
+    }
+
+    public function testAuthWithInvalidCookie()
+    {
+        $response = new Response();
+
+        $fetchAllMock = $this->getMockBuilder("StdClasss")
+            ->setMethods(['execute', 'fetch'])
+            ->getMock();
+
+        $fetchAllMock->expects($this->exactly(2))
+            ->method('fetch')
+            ->willReturn(
+                $this->returnValue(null),
+                $this->returnValue(['uid' => 1]),
+            );
+
+        $fetchAllMock->expects($this->exactly(3))
+            ->method('execute')
+            ->withConsecutive(
+                [$this->callback(function($params) {
+                    $this->assertArrayHasKey(':sid', $params);
+                    return true;
+                })],
+                [$this->callback(function($params) {
+                    $this->assertArrayHasKey(':name', $params);
+                    return true;
+                })],
+                [$this->isType('array')]
+            );
+
+        $mock = $this->getMockBuilder('pdo')
+            ->disableOriginalConstructor()
+            ->setMethods(['query', 'lastInsertId', 'prepare'])
+            ->getMock();
+
+        $mock->expects($this->exactly(3))
+            ->method('prepare')
+            ->withConsecutive(
+                [$this->stringStartsWith('SELECT uid FROM drupal.sessions')],
+                [$this->stringStartsWith('SELECT uid FROM drupal.users_field_data')],
+                [$this->stringStartsWith('INSERT INTO drupal.sessions')]
+            )
+            ->will($this->returnValue($fetchAllMock));
+
+        $_COOKIE = ['SESSbla' => 'ble'];
+        (new \DrupalExternalAuth\Auth($response, $mock))->auth([
+            'name' => 'username',
+            'pass' => 'PrefixHash$' . 'hashOfPassord',
+            'timezone' => 'America/Sao_Paulo',
+            'langcode' => 'pt-br',
+            'roles' => [
+                'administrator'
+            ]
+        ]);
+        unset($_COOKIE['SESSbla']);
     }
 
     public function testLogout()

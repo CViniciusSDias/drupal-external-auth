@@ -28,6 +28,11 @@ class Auth
      * @var Response
      */
     private $response;
+    /**
+     * The uid of Drupal user.
+     * @var string
+     */
+    private $uid;
 
     public function __construct(Response $response, \PDO $pdo, string $schema = 'drupal')
     {
@@ -39,8 +44,8 @@ class Auth
 
     public function auth(array $data)
     {
-        $uid = $this->getUid($data);
-        if (!$this->isLogged($uid)) {
+        if (!$this->isLogged()) {
+            $uid = $this->getUid($data);
             $this->login($uid);
         }
     }
@@ -49,11 +54,13 @@ class Auth
     {
         $cookie = $this->getCookie();
         if ($cookie) {
-            $this->cleanCookieData($cookie);
+            // Delete from database
+            $this->deleteSessionFromDatabase($cookie['value']);
+            $this->setCleanCookie($cookie);
         }
     }
 
-    private function isLogged(string $uid): bool
+    private function isLogged(): bool
     {
         $cookie = $this->getCookie();
         if (!$cookie) {
@@ -63,15 +70,14 @@ class Auth
             'SELECT uid FROM '.$this->schema.'sessions WHERE sid = :sid'
         );
         $sth->execute([':sid' => Crypt::hashBase64($cookie['value'])]);
-        $user = $sth->fetch();
-        if ($user) {
+        if ($sth->fetch()) {
             return true;
         }
-        $this->cleanCookieData($cookie);
+        $this->setCleanCookie($cookie);
         return false;
     }
 
-    private function login(string $uid)
+    private function login(int $uid)
     {
         $sessionDrupal = [
             '_sf2_attributes' => [
@@ -129,10 +135,10 @@ class Auth
         return [];
     }
 
-    private function cleanCookieData(array $cookie)
+    private function setCleanCookie(array $cookie)
     {
-        // Delete from database
-        $this->deleteSessionFromDatabase($cookie['value']);
+        // Unset from global var
+        unset($_COOKIE[$cookie['key']]);
         // Send unset to user
         $this->response->headers->setCookie(Cookie::create(
             $cookie['key'],
@@ -145,8 +151,6 @@ class Auth
             false,
             null
         ));
-        // Unset from global var
-        unset($_COOKIE[$cookie['key']]);
     }
 
     private function deleteSessionFromDatabase(string $value)
@@ -165,7 +169,7 @@ class Auth
         $sth->execute([':name' => $data['name']]);
         $user = $sth->fetch();
         if ($user) {
-            return $user['uid'];
+            return $this->uid = $user['uid'];
         }
         return $this->createUser($data);
     }
@@ -173,13 +177,13 @@ class Auth
     private function createUser(array $data): string
     {
         $this->pdo->query('INSERT INTO '.$this->schema.'sequences () VALUES ();');
-        $uid = $this->pdo->lastInsertId();
+        $this->uid = $this->pdo->lastInsertId();
         $sth = $this->pdo->prepare(
             'INSERT INTO '.$this->schema.'users (uid, uuid, langcode) '.
             'VALUES (:uid, UUID(), :langcode)'
         );
         $sth->execute([
-            ':uid' => $uid,
+            ':uid' => $this->uid,
             ':langcode' => $data['langcode']
         ]);
         $sth = $this->pdo->prepare(
@@ -193,7 +197,7 @@ class Auth
                 :login, :init, :default_langcode)"
         );
         $sth->execute([
-            ':uid' => $uid,
+            ':uid' => $this->uid,
             ':langcode' => $data['langcode'],
             ':preferred_langcode' => $data['langcode'],
             ':preferred_admin_langcode' => null,
@@ -216,14 +220,14 @@ class Auth
         );
         foreach ($data['roles'] as $role) {
             $sth->execute([
-                ':entity_id' => $uid,
-                ':revision_id' => $uid,
+                ':entity_id' => $this->uid,
+                ':revision_id' => $this->uid,
                 ':bundle' => 'user',
                 ':delta' => 0,
                 ':langcode' => $data['langcode'],
                 ':roles_target_id' => $role
             ]);
         }
-        return $uid;
+        return $this->uid;
     }
 }
