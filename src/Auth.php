@@ -22,8 +22,7 @@ class Auth
      * Default schema of Drupal instalation
      * @var string
      */
-    private $schema = 'drupal';
-    private $cookie;
+    private $schema;
     /**
      * @var Response
      */
@@ -56,7 +55,7 @@ class Auth
         if ($cookie) {
             // Delete from database
             $this->deleteSessionFromDatabase($cookie['value']);
-            $this->setCleanCookie($cookie);
+            $this->eraseCookie($cookie);
         }
     }
 
@@ -73,7 +72,7 @@ class Auth
         if ($sth->fetch()) {
             return true;
         }
-        $this->setCleanCookie($cookie);
+        $this->eraseCookie($cookie);
         return false;
     }
 
@@ -135,7 +134,7 @@ class Auth
         return [];
     }
 
-    private function setCleanCookie(array $cookie)
+    private function eraseCookie(array $cookie)
     {
         // Unset from global var
         unset($_COOKIE[$cookie['key']]);
